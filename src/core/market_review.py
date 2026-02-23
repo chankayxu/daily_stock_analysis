@@ -33,24 +33,20 @@ def run_market_review(
 ) -> Optional[str]:
     """
     执行大盘复盘分析
-
-    Args:
-        notifier: 通知服务
-        analyzer: AI分析器（可选）
-        search_service: 搜索服务（可选）
-        send_notification: 是否发送通知
-        merge_notification: 是否合并推送（跳过本次推送，由 main 层合并个股+大盘后统一发送，Issue #190）
-
-    Returns:
-        复盘报告文本
     """
     logger.info("开始执行大盘复盘分析...")
     config = get_config()
-    region = getattr(config, 'market_review_region', 'cn') or 'cn'
+    
+    # 兼容大写或小写的配置属性名
+    region_raw = getattr(config, 'MARKET_REVIEW_REGION', getattr(config, 'market_review_region', 'cn'))
+    
+    # 转换为小写并去除首尾空格，防止 'HK' 或 ' hk ' 导致匹配失败
+    region = str(region_raw).lower().strip() if region_raw else 'cn'
     
     # 支持的区域配置：cn(A股), hk(港股), us(美股), both(A股+美股), all(A股+港股+美股)
     if region not in ('cn', 'hk', 'us', 'both', 'all'):
-        region = 'hk'
+        logger.warning(f"未知的市场区域配置: {region_raw}，自动回退到默认值 'cn'")
+        region = 'cn'
 
     try:
         if region in ('both', 'all'):
@@ -98,13 +94,11 @@ def run_market_review(
             )
             logger.info(f"大盘复盘报告已保存: {filepath}")
             
-            # 推送通知（合并模式下跳过，由 main 层统一发送）
+            # 推送通知
             if merge_notification and send_notification:
                 logger.info("合并推送模式：跳过大盘复盘单独推送，将在个股+大盘复盘后统一发送")
             elif send_notification and notifier.is_available():
-                # 添加标题
                 report_content = f"🎯 大盘复盘\n\n{review_report}"
-
                 success = notifier.send(report_content, email_send_to_all=True)
                 if success:
                     logger.info("大盘复盘推送成功")
