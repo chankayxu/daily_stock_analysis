@@ -51,8 +51,6 @@ from .realtime_types import (
 from .us_index_mapping import is_us_index_code, is_us_stock_code
 
 import time as _time
-# 假设您的文件顶部已经有了这些导入，如果没有请保留您原有的导入
-from .utils import safe_float, safe_int, get_realtime_circuit_breaker, logger
 
 # ================= 新增：全局缓存变量 =================
 _HK_SPOT_CACHE: Optional[pd.DataFrame] = None
