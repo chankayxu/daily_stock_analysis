@@ -51,6 +51,9 @@ class Config:
     # === 自选股配置 ===
     stock_list: List[str] = field(default_factory=list)
 
+    # === 市场区域配置 ===
+    default_region: str = "cn"  # 默认市场区域 (cn:A股, us:美股, hk:港股)
+
     # === 飞书云文档配置 ===
     feishu_app_id: Optional[str] = None
     feishu_app_secret: Optional[str] = None
@@ -200,7 +203,7 @@ class Config:
     schedule_run_immediately: bool = True     # 启动时是否立即执行一次
     run_immediately: bool = True              # 启动时是否立即执行一次（非定时模式）
     market_review_enabled: bool = True        # 是否启用大盘复盘
-    # 大盘复盘市场区域：cn(A股)、us(美股)、both(两者)，us 适合仅关注美股的用户
+    # 大盘复盘市场区域：cn(A股)、us(美股)、hk(港股)、both(多市场)
     market_review_region: str = "cn"
 
     # === 实时行情增强数据配置 ===
@@ -381,6 +384,7 @@ class Config:
         
         return cls(
             stock_list=stock_list,
+            default_region=os.getenv('DEFAULT_REGION', 'cn').lower(),
             feishu_app_id=os.getenv('FEISHU_APP_ID'),
             feishu_app_secret=os.getenv('FEISHU_APP_SECRET'),
             feishu_folder_token=os.getenv('FEISHU_FOLDER_TOKEN'),
@@ -549,10 +553,10 @@ class Config:
         """解析大盘复盘市场区域，非法值记录警告后回退为 cn"""
         import logging
         v = (value or 'cn').strip().lower()
-        if v in ('cn', 'us', 'both'):
+        if v in ('cn', 'us', 'hk', 'both'):
             return v
         logging.getLogger(__name__).warning(
-            f"MARKET_REVIEW_REGION 配置值 '{value}' 无效，已回退为默认值 'cn'（合法值：cn / us / both）"
+            f"MARKET_REVIEW_REGION 配置值 '{value}' 无效，已回退为默认值 'cn'（合法值：cn / us / hk / both）"
         )
         return 'cn'
 
@@ -687,6 +691,7 @@ if __name__ == "__main__":
     config = get_config()
     print("=== 配置加载测试 ===")
     print(f"自选股列表: {config.stock_list}")
+    print(f"默认市场区域: {config.default_region}")
     print(f"数据库路径: {config.database_path}")
     print(f"最大并发数: {config.max_workers}")
     print(f"调试模式: {config.debug}")
