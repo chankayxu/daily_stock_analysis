@@ -960,7 +960,7 @@ class DataFetcherManager:
                 continue
         return []
 
-    def get_market_stats(self) -> Dict[str, Any]:
+    def get_market_stats(self, region: str = 'cn') -> Optional[Dict[str, Any]]:
         """获取市场涨跌统计（自动切换数据源）"""
         for fetcher in self._fetchers:
             try:
@@ -973,15 +973,31 @@ class DataFetcherManager:
                 continue
         return {}
 
-    def get_sector_rankings(self, n: int = 5) -> Tuple[List[Dict], List[Dict]]:
-        """获取板块涨跌榜（自动切换数据源）"""
-        for fetcher in self._fetchers:
-            try:
-                data = fetcher.get_sector_rankings(n)
-                if data:
-                    logger.info(f"[{fetcher.name}] 获取板块排行成功")
-                    return data
-            except Exception as e:
-                logger.warning(f"[{fetcher.name}] 获取板块排行失败: {e}")
-                continue
-        return [], []
+    def get_sector_rankings(self, limit: int = 5, region: str = 'cn') -> Tuple[List[Dict], List[Dict]]:
+            """获取板块涨跌榜（自动切换数据源）"""
+            for fetcher in self._fetchers:
+                try:
+                    # 尝试将 limit 和 region 传给底层 fetcher
+                    # 注意：底层具体的 fetcher 也需要同步修改方法签名以接收这两个参数
+                    data = fetcher.get_sector_rankings(limit=limit, region=region)
+                    if data:
+                        logger.info(f"[{fetcher.name}] 获取板块排行成功")
+                        return data
+                except TypeError as e:
+                    # 容错处理：如果底层 fetcher 还没来得及更新，依然只接收 n 参数
+                    if "unexpected keyword argument" in str(e) or "got multiple values" in str(e):
+                        try:
+                            data = fetcher.get_sector_rankings(n=limit)
+                            if data:
+                                logger.info(f"[{fetcher.name}] 获取板块排行成功 (兼容旧版参数 n)")
+                                return data
+                        except Exception as ex:
+                            logger.warning(f"[{fetcher.name}] 获取板块排行失败 (兼容模式): {ex}")
+                            continue
+                    else:
+                        logger.warning(f"[{fetcher.name}] 获取板块排行失败: {e}")
+                        continue
+                except Exception as e:
+                    logger.warning(f"[{fetcher.name}] 获取板块排行失败: {e}")
+                    continue
+            return [], []
