@@ -239,7 +239,7 @@ class YfinanceFetcher(BaseFetcher):
             yf: yfinance 模块引用
             yf_code: yfinance 使用的代码（如 '000001.SS'、'^GSPC'）
             name: 指数显示名称
-            return_code: 写入结果 dict 的 code 字段（如 'sh000001'、'SPX'）
+            return_code:写入结果 dict 的 code 字段（如 'sh000001'、'SPX'）
 
         Returns:
             行情字典，失败时返回 None
@@ -276,13 +276,15 @@ class YfinanceFetcher(BaseFetcher):
 
     def get_main_indices(self, region: str = "cn") -> Optional[List[Dict[str, Any]]]:
         """
-        获取主要指数行情 (Yahoo Finance)，支持 A 股与美股。
-        region=us 时委托给 _get_us_main_indices。
+        获取主要指数行情 (Yahoo Finance)，支持 A 股、港股与美股。
         """
         import yfinance as yf
 
         if region == "us":
             return self._get_us_main_indices(yf)
+        
+        if region == "hk":
+            return self._get_hk_main_indices(yf)
 
         # A 股指数：akshare 代码 -> (yfinance 代码, 显示名称)
         yf_mapping = {
@@ -338,6 +340,33 @@ class YfinanceFetcher(BaseFetcher):
 
         except Exception as e:
             logger.error(f"[Yfinance] 获取美股指数行情失败: {e}")
+
+        return None
+
+    def _get_hk_main_indices(self, yf) -> Optional[List[Dict[str, Any]]]:
+        """获取港股主要指数行情（恒指、恒生科技、恒生国企）"""
+        hk_indices = {
+            'HSI': ('^HSI', '恒生指数'),
+            'HSTECH': ('^HSTECH', '恒生科技指数'),
+            'HSCEI': ('^HSCE', '恒生国企指数')
+        }
+        results = []
+        try:
+            for code, (yf_symbol, name) in hk_indices.items():
+                try:
+                    item = self._fetch_yf_ticker_data(yf, yf_symbol, name, code)
+                    if item:
+                        results.append(item)
+                        logger.debug(f"[Yfinance] 获取港股指数 {name} 成功")
+                except Exception as e:
+                    logger.warning(f"[Yfinance] 获取港股指数 {name} 失败: {e}")
+
+            if results:
+                logger.info(f"[Yfinance] 成功获取 {len(results)} 个港股指数行情")
+                return results
+
+        except Exception as e:
+            logger.error(f"[Yfinance] 获取港股指数行情失败: {e}")
 
         return None
 
