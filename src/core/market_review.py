@@ -1,11 +1,11 @@
 # -*- coding: utf-8 -*-
 """
 ===================================
-股票智能分析系统 - 大盘复盘模块（支持 A 股 / 美股）
+股票智能分析系统 - 大盘复盘模块（支持 A股 / 港股 / 美股）
 ===================================
 
 职责：
-1. 根据 MARKET_REVIEW_REGION 配置选择市场区域（cn / us / both）
+1. 根据 MARKET_REVIEW_REGION 配置选择市场区域（cn / hk / us / both / all）
 2. 执行大盘复盘分析并生成复盘报告
 3. 保存和发送复盘报告
 """
@@ -47,32 +47,40 @@ def run_market_review(
     logger.info("开始执行大盘复盘分析...")
     config = get_config()
     region = getattr(config, 'market_review_region', 'cn') or 'cn'
-    if region not in ('cn', 'us', 'both'):
-        region = 'cn'
+    
+    # 支持的区域配置：cn(A股), hk(港股), us(美股), both(A股+美股), all(A股+港股+美股)
+    if region not in ('cn', 'hk', 'us', 'both', 'all'):
+        region = 'hk'
 
     try:
-        if region == 'both':
-            # 顺序执行 A 股 + 美股，合并报告
-            cn_analyzer = MarketAnalyzer(
-                search_service=search_service, analyzer=analyzer, region='cn'
-            )
-            us_analyzer = MarketAnalyzer(
-                search_service=search_service, analyzer=analyzer, region='us'
-            )
-            logger.info("生成 A 股大盘复盘报告...")
-            cn_report = cn_analyzer.run_daily_review()
-            logger.info("生成美股大盘复盘报告...")
-            us_report = us_analyzer.run_daily_review()
-            review_report = ''
-            if cn_report:
-                review_report = f"# A股大盘复盘\n\n{cn_report}"
-            if us_report:
-                if review_report:
-                    review_report += "\n\n---\n\n> 以下为美股大盘复盘\n\n"
-                review_report += f"# 美股大盘复盘\n\n{us_report}"
-            if not review_report:
+        if region in ('both', 'all'):
+            # 确定需要执行的市场列表
+            if region == 'both':
+                regions_to_run = ['cn', 'us']
+            else:
+                regions_to_run = ['cn', 'hk', 'us']
+                
+            region_names = {'cn': 'A股', 'hk': '港股', 'us': '美股'}
+            reports = []
+            
+            # 顺序执行各市场复盘
+            for r in regions_to_run:
+                logger.info(f"生成 {region_names[r]} 大盘复盘报告...")
+                market_analyzer = MarketAnalyzer(
+                    search_service=search_service, analyzer=analyzer, region=r
+                )
+                report = market_analyzer.run_daily_review()
+                if report:
+                    reports.append(f"# {region_names[r]}大盘复盘\n\n{report}")
+            
+            # 合并多市场报告
+            if reports:
+                review_report = "\n\n---\n\n> 以下为其他市场复盘\n\n".join(reports)
+            else:
                 review_report = None
+                
         else:
+            # 单一市场复盘
             market_analyzer = MarketAnalyzer(
                 search_service=search_service,
                 analyzer=analyzer,
