@@ -3,7 +3,7 @@
 大盘复盘市场区域配置
 
 定义各市场区域的指数、新闻搜索词、Prompt 提示等元数据，
-供 MarketAnalyzer 按 region 切换 A 股/美股复盘行为。
+供 MarketAnalyzer 按 region 切换 A 股/美股/港股复盘行为。
 """
 
 from dataclasses import dataclass
@@ -14,16 +14,16 @@ from typing import List
 class MarketProfile:
     """大盘复盘市场区域配置"""
 
-    region: str  # "cn" | "us"
-    # 用于判断整体走势的指数代码，cn 用上证 000001，us 用标普 SPX
+    region: str  # "cn" | "us" | "hk"
+    # 用于判断整体走势的指数代码
     mood_index_code: str
     # 新闻搜索关键词
     news_queries: List[str]
     # 指数点评 Prompt 提示语
     prompt_index_hint: str
-    # 市场概况是否包含涨跌家数、涨停跌停（A 股有，美股无）
+    # 市场概况是否包含涨跌家数、涨停跌停
     has_market_stats: bool
-    # 市场概况是否包含板块涨跌（A 股有，美股暂无）
+    # 市场概况是否包含板块涨跌
     has_sector_rankings: bool
 
 
@@ -53,9 +53,25 @@ US_PROFILE = MarketProfile(
     has_sector_rankings=False,
 )
 
+# === 新增港股配置 ===
+HK_PROFILE = MarketProfile(
+    region="hk",
+    mood_index_code="HSI", # 恒生指数
+    news_queries=[
+        "港股 大盘 复盘",
+        "恒生指数 行情 分析",
+        "港股 市场 热点 板块",
+    ],
+    prompt_index_hint="分析恒生指数、恒生科技指数等走势特点",
+    has_market_stats=False, # 视您的数据源是否支持港股涨跌家数统计而定，通常设为False比较稳妥
+    has_sector_rankings=False,
+)
+
 
 def get_profile(region: str) -> MarketProfile:
     """根据 region 返回对应的 MarketProfile"""
     if region == "us":
         return US_PROFILE
+    elif region == "hk":
+        return HK_PROFILE
     return CN_PROFILE
