@@ -167,9 +167,12 @@ class BaseFetcher(ABC):
         """
         return None
 
-    def get_market_stats(self) -> Optional[Dict[str, Any]]:
+    def get_market_stats(self, region: str = 'cn') -> Optional[Dict[str, Any]]:
         """
         获取市场涨跌统计
+
+        Args:
+            region: 市场区域 ('cn', 'hk', 'us')，默认为 'cn'
 
         Returns:
             Dict: 包含:
@@ -182,15 +185,16 @@ class BaseFetcher(ABC):
         """
         return None
 
-    def get_sector_rankings(self, n: int = 5) -> Optional[Tuple[List[Dict], List[Dict]]]:
+    def get_sector_rankings(self, limit: int = 10, region: str = 'cn') -> Optional[List[Dict[str, Any]]]:
         """
-        获取板块涨跌榜
+        获取板块涨跌幅排行
 
         Args:
-            n: 返回前n个
+            limit: 返回的板块数量，默认为 10
+            region: 市场区域 ('cn', 'hk', 'us')，默认为 'cn'
 
         Returns:
-            Tuple: (领涨板块列表, 领跌板块列表)
+            List[Dict]: 板块排行列表
         """
         return None
 
