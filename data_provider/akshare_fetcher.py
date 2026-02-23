@@ -50,7 +50,15 @@ from .realtime_types import (
 )
 from .us_index_mapping import is_us_index_code, is_us_stock_code
 
+import time as _time
+# 假设您的文件顶部已经有了这些导入，如果没有请保留您原有的导入
+from .utils import safe_float, safe_int, get_realtime_circuit_breaker, logger
 
+# ================= 新增：全局缓存变量 =================
+_HK_SPOT_CACHE: Optional[pd.DataFrame] = None
+_HK_SPOT_CACHE_TIME: float = 0.0
+_HK_CACHE_EXPIRE_SECONDS: int = 900  # 缓存有效期 5 分钟
+# ======================================================
 # 保留旧的 RealtimeQuote 别名，用于向后兼容
 RealtimeQuote = UnifiedRealtimeQuote
 
@@ -1138,6 +1146,7 @@ class AkshareFetcher(BaseFetcher):
         Returns:
             UnifiedRealtimeQuote 对象，获取失败返回 None
         """
+        global _HK_SPOT_CACHE, _HK_SPOT_CACHE_TIME
         import akshare as ak
         circuit_breaker = get_realtime_circuit_breaker()
         source_key = "akshare_hk"
@@ -1150,14 +1159,25 @@ class AkshareFetcher(BaseFetcher):
             # 确保代码格式正确（5位数字）
             code = stock_code.lower().replace('hk', '').zfill(5)
             
-            logger.info(f"[API调用] ak.stock_hk_spot_em() 获取港股实时行情...")
-            import time as _time
-            api_start = _time.time()
+            # ================= 新增：缓存逻辑 =================
+            current_time = _time.time()
+            if _HK_SPOT_CACHE is not None and (current_time - _HK_SPOT_CACHE_TIME) < _HK_CACHE_EXPIRE_SECONDS:
+                logger.info("[缓存命中] 使用已缓存的港股全量实时行情数据")
+                df = _HK_SPOT_CACHE
+            else:
+                logger.info(f"[API调用] ak.stock_hk_spot_em() 获取港股实时行情 (耗时较长，将缓存{_HK_CACHE_EXPIRE_SECONDS}秒)...")
+                api_start = _time.time()
+                
+                df = ak.stock_hk_spot_em()
+                
+                api_elapsed = _time.time() - api_start
+                logger.info(f"[API返回] ak.stock_hk_spot_em 成功: 返回 {len(df)} 只港股, 耗时 {api_elapsed:.2f}s")
+                
+                # 更新缓存
+                _HK_SPOT_CACHE = df
+                _HK_SPOT_CACHE_TIME = current_time
+            # ==================================================
             
-            df = ak.stock_hk_spot_em()
-            
-            api_elapsed = _time.time() - api_start
-            logger.info(f"[API返回] ak.stock_hk_spot_em 成功: 返回 {len(df)} 只港股, 耗时 {api_elapsed:.2f}s")
             circuit_breaker.record_success(source_key)
             
             # 查找指定港股
