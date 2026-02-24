@@ -141,7 +141,7 @@ jobs:
           SINGLE_STOCK_NOTIFY: ${{ vars.SINGLE_STOCK_NOTIFY || secrets.SINGLE_STOCK_NOTIFY || 'false' }}
           MARKET_REVIEW_ENABLED: ${{ vars.MARKET_REVIEW_ENABLED || secrets.MARKET_REVIEW_ENABLED || 'true' }}
           ANALYSIS_DELAY: ${{ vars.ANALYSIS_DELAY || secrets.ANALYSIS_DELAY || '0' }}
-          
+          MARKET_REVIEW_REGION: ${{ vars.MARKET_REVIEW_REGION || 'hk' }}
           # ==========================================
           # 系统配置
           # ==========================================
