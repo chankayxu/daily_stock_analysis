@@ -98,7 +98,7 @@ class MarketCommand(BotCommand):
                 analyzer = GeminiAnalyzer()
 
             # 读取配置中的市场区域，与定时任务/CLI 保持一致
-            region = getattr(config, 'market_review_region', 'cn')
+            region = getattr(config, 'market_review_region', 'hk')
 
             # 执行复盘
             market_analyzer = MarketAnalyzer(
